@@ -4,9 +4,8 @@
     "step": {
       "user": {
         "title": "Antigravity verbinden",
-        "description": "Ein Login-Flow direkt aus Home Assistant funktioniert bei Antigravity nicht zuverlässig (Google leitet auf den Rechner zurück, der den Login gestartet hat). Melde dich stattdessen einmal lokal in der Antigravity-CLI/IDE an, öffne dort die gespeicherte Token-Datei (z. B. `~/.gemini/antigravity-cli/antigravity-oauth-token`) und füge Access- und Refresh-Token hier ein.",
+        "description": "Ein Login-Flow direkt aus Home Assistant funktioniert bei Antigravity nicht zuverlässig (Google leitet auf den Rechner zurück, der den Login gestartet hat). Melde dich stattdessen einmal lokal in der Antigravity-CLI/IDE an, öffne dort die gespeicherte Token-Datei (z. B. `~/.gemini/antigravity-cli/antigravity-oauth-token`) und füge den Refresh-Token hier ein. Ein Access-Token wird daraus automatisch geholt.",
         "data": {
-          "access_token": "Access-Token",
           "refresh_token": "Refresh-Token",
           "project_id": "Google-Cloud-Projekt-ID (optional, meist leer lassen)"
         }

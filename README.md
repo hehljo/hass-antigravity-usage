@@ -37,7 +37,8 @@ logged.
 5. Sign in once locally with the Antigravity CLI/IDE if you have not already,
    open its saved token file (e.g.
    `~/.gemini/antigravity-cli/antigravity-oauth-token` on Linux/macOS), and
-   paste the `access_token` and `refresh_token` values into the form.
+   paste the `refresh_token` value into the form. An access token is fetched
+   from it automatically.
 
 [![Add repository to HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fhehljo%2Fhass-antigravity-usage)
 

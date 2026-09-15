@@ -43,26 +43,29 @@ class AntigravityPulseConfigFlow(ConfigFlow, domain=DOMAIN):
     fallback was retired in 2022, and a HA-hosted loopback listener only
     works when the browser and the HA host are the same machine). Instead,
     the user logs in once locally (Antigravity CLI/IDE already did this) and
-    pastes the resulting access + refresh token here — the same approach
-    reference tools like CodexBar and openusage use for Gemini/Antigravity.
+    pastes the resulting refresh token here — the same approach reference
+    tools like CodexBar and openusage use for Gemini/Antigravity. The access
+    token is short-lived and is fetched automatically from the refresh token
+    below, so it is never something the user needs to find or paste.
     """
 
     VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Collect a pasted access/refresh token pair and verify it."""
+        """Collect a pasted refresh token and exchange it for an access token."""
         errors: dict[str, str] = {}
         if user_input is not None:
-            access_token = user_input["access_token"].strip()
             refresh_token = user_input["refresh_token"].strip()
             try:
-                id_token = await self._async_verify_refresh_token(refresh_token)
+                tokens = await self._async_verify_refresh_token(refresh_token)
             except _InvalidToken:
                 errors["base"] = "invalid_token"
             except aiohttp.ClientError:
                 errors["base"] = "cannot_connect"
             else:
-                email = account_email(id_token)
+                access_token = tokens["access_token"]
+                id_token = tokens.get("id_token")
+                email = account_email(id_token) if isinstance(id_token, str) else None
                 if email and self.source != SOURCE_REAUTH:
                     await self.async_set_unique_id(email)
                     self._abort_if_unique_id_configured()
@@ -93,7 +96,6 @@ class AntigravityPulseConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required("access_token"): str,
                     vol.Required("refresh_token"): str,
                     vol.Optional("project_id", default=""): str,
                 }
@@ -105,8 +107,8 @@ class AntigravityPulseConfigFlow(ConfigFlow, domain=DOMAIN):
         """Reconnect a revoked or expired Antigravity authorization."""
         return await self.async_step_user()
 
-    async def _async_verify_refresh_token(self, refresh_token: str) -> str | None:
-        """Exchange the refresh token once to confirm it is valid."""
+    async def _async_verify_refresh_token(self, refresh_token: str) -> dict[str, Any]:
+        """Exchange the refresh token once, both to verify and to get an access token."""
         session = aiohttp_client.async_get_clientsession(self.hass)
         async with session.post(
             GOOGLE_TOKEN_URL,
@@ -124,8 +126,7 @@ class AntigravityPulseConfigFlow(ConfigFlow, domain=DOMAIN):
             tokens = await response.json(content_type=None)
         if not isinstance(tokens, dict) or not tokens.get("access_token"):
             raise _InvalidToken
-        id_token = tokens.get("id_token")
-        return id_token if isinstance(id_token, str) else None
+        return tokens
 
     @staticmethod
     @callback
