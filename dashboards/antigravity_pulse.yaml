@@ -1,0 +1,29 @@
+title: Antigravity Pulse
+views:
+  - title: Overview
+    path: antigravity-pulse
+    icon: mdi:gauge
+    cards:
+      - type: gauge
+        name: Gemini 5h usage
+        entity: sensor.antigravity_pulse_gemini_5h_usage
+        min: 0
+        max: 100
+        severity:
+          green: 0
+          yellow: 60
+          red: 85
+      - type: gauge
+        name: Claude & GPT 5h usage
+        entity: sensor.antigravity_pulse_claude_gpt_5h_usage
+        min: 0
+        max: 100
+        severity:
+          green: 0
+          yellow: 60
+          red: 85
+      - type: entities
+        title: Antigravity windows
+        entities:
+          - entity: sensor.antigravity_pulse_gemini_5h_reset
+          - entity: sensor.antigravity_pulse_claude_gpt_5h_reset

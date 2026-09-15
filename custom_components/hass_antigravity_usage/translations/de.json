@@ -1,0 +1,34 @@
+{
+  "title": "Antigravity Pulse",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Antigravity verbinden",
+        "description": "Ein Login-Flow direkt aus Home Assistant funktioniert bei Antigravity nicht zuverlässig (Google leitet auf den Rechner zurück, der den Login gestartet hat). Melde dich stattdessen einmal lokal in der Antigravity-CLI/IDE an, öffne dort die gespeicherte Token-Datei (z. B. `~/.gemini/antigravity-cli/antigravity-oauth-token`) und füge Access- und Refresh-Token hier ein.",
+        "data": {
+          "access_token": "Access-Token",
+          "refresh_token": "Refresh-Token",
+          "project_id": "Google-Cloud-Projekt-ID (optional, meist leer lassen)"
+        }
+      }
+    },
+    "error": {
+      "invalid_token": "Google hat den Refresh-Token abgelehnt. Bitte neu aus der Token-Datei kopieren.",
+      "cannot_connect": "Google ist gerade nicht erreichbar."
+    },
+    "abort": {
+      "cannot_connect": "Google ist gerade nicht erreichbar.",
+      "already_configured": "Dieses Antigravity-Konto ist schon verbunden."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Aktualisierung",
+        "data": {
+          "update_interval": "Abfrageintervall (Sekunden)"
+        }
+      }
+    }
+  }
+}
