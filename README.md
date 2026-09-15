@@ -6,6 +6,8 @@
 [![GitHub Release](https://img.shields.io/github/v/release/hehljo/hass-antigravity-usage?display_name=tag)](https://github.com/hehljo/hass-antigravity-usage/releases)
 [![License](https://img.shields.io/github/license/hehljo/hass-antigravity-usage)](LICENSE)
 
+![Antigravity Pulse Icon](custom_components/hass_antigravity_usage/brand/icon.png)
+
 Antigravity Pulse brings Google Antigravity usage into Home Assistant: the
 rolling 5-hour quota window per model group, the model currently limiting
 that window, and its reset time.
