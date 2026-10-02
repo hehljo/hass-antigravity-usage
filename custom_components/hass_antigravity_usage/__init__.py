@@ -58,7 +58,7 @@ async def _async_options_updated(hass, entry: AntigravityUsageConfigEntry) -> No
 
 
 class AntigravityUsageCoordinator(DataUpdateCoordinator[dict[str, Any]]):
-    """Fetch the Antigravity 5-hour quota window with one coordinated poll."""
+    """Fetch the Antigravity 5-hour and weekly quota windows with one coordinated poll."""
 
     config_entry: AntigravityUsageConfigEntry
 

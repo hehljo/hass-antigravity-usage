@@ -10,7 +10,7 @@ MIN_UPDATE_INTERVAL = 60
 MAX_UPDATE_INTERVAL = 3600
 
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-QUOTA_API_URL = "https://daily-cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels"
+QUOTA_API_URL = "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary"
 QUOTA_USER_AGENT = "antigravity/ide/2.11.0 (aidev_client; os_type=darwin; arch=arm64)"
 
 # Client credentials Antigravity's own installed-app OAuth client uses. Every

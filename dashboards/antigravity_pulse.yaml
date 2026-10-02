@@ -14,8 +14,26 @@ views:
           yellow: 60
           red: 85
       - type: gauge
+        name: Gemini weekly usage
+        entity: sensor.antigravity_pulse_gemini_weekly_usage
+        min: 0
+        max: 100
+        severity:
+          green: 0
+          yellow: 60
+          red: 85
+      - type: gauge
         name: Claude & GPT 5h usage
         entity: sensor.antigravity_pulse_claude_gpt_5h_usage
+        min: 0
+        max: 100
+        severity:
+          green: 0
+          yellow: 60
+          red: 85
+      - type: gauge
+        name: Claude & GPT weekly usage
+        entity: sensor.antigravity_pulse_claude_gpt_weekly_usage
         min: 0
         max: 100
         severity:
@@ -26,4 +44,6 @@ views:
         title: Antigravity windows
         entities:
           - entity: sensor.antigravity_pulse_gemini_5h_reset
+          - entity: sensor.antigravity_pulse_gemini_weekly_reset
           - entity: sensor.antigravity_pulse_claude_gpt_5h_reset
+          - entity: sensor.antigravity_pulse_claude_gpt_weekly_reset

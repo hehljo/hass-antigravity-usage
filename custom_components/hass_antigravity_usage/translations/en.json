@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Connect Antigravity",
-        "description": "A login flow started from Home Assistant does not work reliably for Antigravity (Google redirects back to the machine that started the login). Instead, sign in once locally in the Antigravity CLI/IDE, open its saved token file (e.g. `~/.gemini/antigravity-cli/antigravity-oauth-token`), and paste the refresh token here. An access token is fetched from it automatically.",
+        "description": "A login flow started from Home Assistant does not work for Antigravity (Google redirects back to the machine that started the login). Paste a refresh token from a program that signed in as Antigravity instead: the Antigravity CLI (`~/.gemini/antigravity-cli/antigravity-oauth-token`, value under `token` → `refresh_token`) or tuxevil-rotator (`~/.tuxevil-rotator/accounts.json`). Gemini CLI tokens do not work. An access token is fetched automatically.",
         "data": {
           "refresh_token": "Refresh token",
           "project_id": "Google Cloud project ID (optional, usually leave blank)"
@@ -12,7 +12,7 @@
       }
     },
     "error": {
-      "invalid_token": "Google rejected the refresh token. Copy it again from the token file.",
+      "invalid_token": "Google rejected the refresh token. Copy it again — it must come from Antigravity, not Gemini CLI.",
       "cannot_connect": "Google cannot be reached right now."
     },
     "abort": {

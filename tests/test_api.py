@@ -18,52 +18,71 @@ account_email = _API.account_email
 parse_usage = _API.parse_usage
 
 
-def _model(remaining_fraction: float | None, reset_time: str | None = None) -> dict:
-    quota_info: dict = {}
-    if remaining_fraction is not None:
-        quota_info["remainingFraction"] = remaining_fraction
-    if reset_time is not None:
-        quota_info["resetTime"] = reset_time
-    return {"quotaInfo": quota_info} if quota_info else {}
+def _bucket(bucket_id: str, window: str, remaining: float | None, reset: str | None = None) -> dict:
+    bucket: dict = {"bucketId": bucket_id, "window": window}
+    if remaining is not None:
+        bucket["remainingFraction"] = remaining
+    if reset is not None:
+        bucket["resetTime"] = reset
+    return bucket
+
+
+# Shape copied from a live retrieveUserQuotaSummary response (2026-10-02).
+LIVE_SHAPE = {
+    "groups": [
+        {
+            "displayName": "Gemini Models",
+            "buckets": [
+                _bucket("gemini-weekly", "weekly", 0.7762013, "2026-10-08T18:37:23Z"),
+                _bucket("gemini-5h", "5h", 0.8678547, "2026-10-03T02:03:18Z"),
+            ],
+        },
+        {
+            "displayName": "Claude and GPT models",
+            "buckets": [
+                _bucket("3p-weekly", "weekly", 1, "2026-10-09T21:29:34Z"),
+                _bucket("3p-5h", "5h", 1, "2026-10-03T02:29:34Z"),
+            ],
+        },
+    ]
+}
 
 
 class ApiTests(unittest.TestCase):
-    def test_usage_groups_models_into_pools_and_picks_the_worst(self) -> None:
-        result = parse_usage(
-            {
-                "models": {
-                    "gemini-3.8-flash-high": _model(0.9, "2026-09-15T21:51:46Z"),
-                    "gemini-3.1-pro-high": _model(0.17, "2026-09-15T21:51:46Z"),
-                    "claude-sonnet-4-6": _model(1.0, "2026-09-15T21:52:39Z"),
-                    "gpt-oss-120b-medium": _model(1.0, "2026-09-15T21:52:39Z"),
-                    "chat_20706": _model(1.0),  # no pool prefix match -> ignored
-                    "gemini-3.7-flash-tiered": {},  # no quotaInfo -> ignored
-                }
-            }
-        )
+    def test_usage_reads_both_windows_per_pool(self) -> None:
+        result = parse_usage(LIVE_SHAPE)
 
-        # The pool is only as usable as its most exhausted member.
-        self.assertEqual(result["gemini_5h_used_percent"], 83.0)
-        self.assertEqual(result["gemini_5h_remaining_percent"], 17.0)
-        self.assertEqual(result["gemini_5h_limiting_model"], "gemini-3.1-pro-high")
-        self.assertEqual(result["gemini_5h_reset_time"], "2026-09-15T21:51:46Z")
+        self.assertEqual(result["gemini_5h_used_percent"], 13.21)
+        self.assertEqual(result["gemini_5h_remaining_percent"], 86.79)
+        self.assertEqual(result["gemini_5h_reset_time"], "2026-10-03T02:03:18Z")
+        self.assertEqual(result["gemini_weekly_used_percent"], 22.38)
+        self.assertEqual(result["gemini_weekly_reset_time"], "2026-10-08T18:37:23Z")
 
         self.assertEqual(result["claude_gpt_5h_used_percent"], 0.0)
-        self.assertEqual(result["claude_gpt_5h_remaining_percent"], 100.0)
+        self.assertEqual(result["claude_gpt_weekly_used_percent"], 0.0)
 
-    def test_usage_ignores_entries_without_a_numeric_remaining_fraction(self) -> None:
+    def test_untouched_window_has_no_reset_time(self) -> None:
+        # Google moves an unused window's reset time forward on every poll.
+        result = parse_usage(LIVE_SHAPE)
+        self.assertNotIn("claude_gpt_5h_reset_time", result)
+        self.assertNotIn("claude_gpt_weekly_reset_time", result)
+
+    def test_usage_ignores_unknown_groups_windows_and_missing_fractions(self) -> None:
         result = parse_usage(
             {
-                "models": {
-                    "gemini-3.8-flash-high": {"quotaInfo": {"resetTime": "2026-09-15T21:51:46Z"}},
-                }
+                "groups": [
+                    {"buckets": [_bucket("future-5h", "5h", 0.5)]},
+                    {"buckets": [_bucket("gemini-monthly", "monthly", 0.5)]},
+                    {"buckets": [_bucket("gemini-5h", "5h", None, "2026-10-03T02:03:18Z")]},
+                ]
             }
         )
-        self.assertNotIn("gemini_5h_used_percent", result)
+        self.assertEqual(result, {})
 
     def test_usage_returns_empty_dict_for_malformed_payload(self) -> None:
         self.assertEqual(parse_usage({}), {})
-        self.assertEqual(parse_usage({"models": "not-a-dict"}), {})
+        self.assertEqual(parse_usage({"groups": "not-a-list"}), {})
+        self.assertEqual(parse_usage({"groups": [None, {"buckets": "x"}, {"buckets": [None]}]}), {})
 
     def test_account_email_reads_claims_without_validating_the_jwt(self) -> None:
         payload = {"email": "marktplaner.app@gmail.com"}

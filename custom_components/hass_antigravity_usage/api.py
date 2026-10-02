@@ -8,13 +8,17 @@ import json
 from datetime import UTC, datetime
 from typing import Any
 
-# Google quota pools this integration groups models into; mirrors what the
-# Antigravity IDE's own /usage screen shows ("GEMINI MODELS" vs. "CLAUDE AND
-# GPT MODELS"). A model not covered by any prefix is ignored, not guessed.
-QUOTA_POOL_PREFIXES: dict[str, tuple[str, ...]] = {
-    "gemini": ("gemini-",),
-    "claude_gpt": ("claude-", "gpt-oss-"),
+# Google's quota groups, keyed by the prefix of their bucketId in the
+# retrieveUserQuotaSummary response ("gemini-5h", "3p-weekly", ...). The pool
+# names stay stable because sensor unique IDs are built from them. A group
+# not covered here is ignored, not guessed.
+BUCKET_POOL_PREFIXES: dict[str, str] = {
+    "gemini-": "gemini",
+    "3p-": "claude_gpt",
 }
+
+# Window names as Google reports them in each bucket's "window" field.
+QUOTA_WINDOWS: tuple[str, ...] = ("5h", "weekly")
 
 
 class AntigravityUsageError(Exception):
@@ -46,55 +50,53 @@ def account_email(id_token: str | None) -> str | None:
     return email if isinstance(email, str) and email else None
 
 
-def _quota_pool_for_model(model_id: str) -> str | None:
-    for pool, prefixes in QUOTA_POOL_PREFIXES.items():
-        if model_id.startswith(prefixes):
+def _pool_for_bucket(bucket_id: str) -> str | None:
+    for prefix, pool in BUCKET_POOL_PREFIXES.items():
+        if bucket_id.startswith(prefix):
             return pool
     return None
 
 
 def parse_usage(payload: dict[str, Any]) -> dict[str, Any]:
-    """Normalize a fetchAvailableModels response into entity-ready values.
+    """Normalize a retrieveUserQuotaSummary response into entity-ready values.
 
-    Google's quotaInfo only ever carries the 5-hour rolling window here (the
-    IDE's own /usage screen also shows a separate weekly window, but that
-    comes from an endpoint this integration does not call yet — verified by
-    comparing a live poll against /usage on 2026-09-15). Do not synthesize a
-    weekly percentage from this response.
+    Each model group carries one bucket per window ("5h" and "weekly"), the
+    same two windows Antigravity's own /usage screen shows. Verified live on
+    2026-10-02: the 5h values match fetchAvailableModels' quotaInfo exactly.
+
+    An untouched window (nothing used yet) still gets a resetTime from Google,
+    but it is just "now + window length" and moves forward on every poll, so
+    it is dropped instead of being shown as a reset that never happens.
     """
-    models = payload.get("models")
-    if not isinstance(models, dict):
+    groups = payload.get("groups")
+    if not isinstance(groups, list):
         return {}
 
-    pool_worst: dict[str, dict[str, Any]] = {}
-    for model_id, info in models.items():
-        if not isinstance(info, dict):
-            continue
-        pool = _quota_pool_for_model(model_id)
-        if pool is None:
-            continue
-        quota_info = info.get("quotaInfo")
-        if not isinstance(quota_info, dict):
-            continue
-        remaining = quota_info.get("remainingFraction")
-        if not isinstance(remaining, (int, float)):
-            continue
-
-        current = pool_worst.get(pool)
-        if current is None or remaining < current["remaining_fraction"]:
-            pool_worst[pool] = {
-                "remaining_fraction": float(remaining),
-                "reset_time": quota_info.get("resetTime"),
-                "model_id": model_id,
-            }
-
     result: dict[str, Any] = {}
-    for pool, details in pool_worst.items():
-        used_percent = round((1 - details["remaining_fraction"]) * 100, 2)
-        result[f"{pool}_5h_used_percent"] = used_percent
-        result[f"{pool}_5h_remaining_percent"] = round(100 - used_percent, 2)
-        result[f"{pool}_5h_reset_time"] = _iso_timestamp(details["reset_time"])
-        result[f"{pool}_5h_limiting_model"] = details["model_id"]
+    for group in groups:
+        buckets = group.get("buckets") if isinstance(group, dict) else None
+        if not isinstance(buckets, list):
+            continue
+        for bucket in buckets:
+            if not isinstance(bucket, dict):
+                continue
+            bucket_id = bucket.get("bucketId")
+            window = bucket.get("window")
+            remaining = bucket.get("remainingFraction")
+            if not isinstance(bucket_id, str) or window not in QUOTA_WINDOWS:
+                continue
+            if not isinstance(remaining, (int, float)):
+                continue
+            pool = _pool_for_bucket(bucket_id)
+            if pool is None:
+                continue
+
+            used_percent = round((1 - float(remaining)) * 100, 2)
+            prefix = f"{pool}_{window}"
+            result[f"{prefix}_used_percent"] = used_percent
+            result[f"{prefix}_remaining_percent"] = round(100 - used_percent, 2)
+            if used_percent > 0:
+                result[f"{prefix}_reset_time"] = _iso_timestamp(bucket.get("resetTime"))
 
     return {key: value for key, value in result.items() if value is not None}
 
